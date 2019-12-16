@@ -1,8 +1,7 @@
 name: Go
 on: [push]
 jobs:
-
-  build:
+  test:
     name: Build
     runs-on: ubuntu-latest
     steps:
@@ -15,6 +14,10 @@ jobs:
 
     - name: Check out code into the Go module directory
       uses: actions/checkout@v1
+
+    - name: Install PostgreSQL
+      run: |
+        sudo apt install postgresql
 
     - name: Get dependencies
       run: |
