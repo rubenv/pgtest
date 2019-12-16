@@ -7,7 +7,9 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"time"
 
+	"github.com/eapache/go-resiliency/retrier"
 	_ "github.com/lib/pq"
 )
 
@@ -66,8 +68,35 @@ func Start() (*PG, error) {
 	}
 
 	// Connect to DB
-	dsn := makeDSN(sockDir, "test")
+	dsn := makeDSN(sockDir, "postgres")
 	db, err := sql.Open("postgres", dsn)
+	if err != nil {
+		return nil, err
+	}
+
+	// Prepare test database
+	r := retrier.New(retrier.ConstantBackoff(100, 100*time.Millisecond), nil)
+	err = r.Run(func() error {
+		err = db.Ping()
+		if err != nil {
+			return err
+		}
+
+		_, err = db.Exec("CREATE DATABASE test")
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	err = db.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	// Connect to it properly
+	dsn = makeDSN(sockDir, "test")
+	db, err = sql.Open("postgres", dsn)
 	if err != nil {
 		return nil, err
 	}
