@@ -75,14 +75,9 @@ func Start() (*PG, error) {
 	}
 
 	// Prepare test database
-	r := retrier.New(retrier.ConstantBackoff(100, 100*time.Millisecond), nil)
+	r := retrier.New(retrier.ConstantBackoff(1000, 10*time.Millisecond), nil)
 	err = r.Run(func() error {
-		err = db.Ping()
-		if err != nil {
-			return err
-		}
-
-		_, err = db.Exec("CREATE DATABASE test")
+		_, err := db.Exec("CREATE DATABASE test")
 		return err
 	})
 	if err != nil {
