@@ -1,3 +1,7 @@
+// Spawns a PostgreSQL server with a single database configured. Ideal for unit
+// tests where you want a clean instance each time. Then clean up afterwards.
+//
+// Requires PostgreSQL to be installed on your system (but it doesn't have to be running).
 package pgtest
 
 import (
