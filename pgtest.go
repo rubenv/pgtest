@@ -39,8 +39,14 @@ func Start() (*PG, error) {
 		return nil, err
 	}
 
+	// Find executables root path
+	binPath, err := findBinPath()
+	if err != nil {
+		return nil, err
+	}
+
 	// Initialize PostgreSQL data directory
-	init := exec.Command("initdb",
+	init := exec.Command(path.Join(binPath, "initdb"),
 		"-D", dataDir,
 		"--no-sync",
 	)
@@ -50,12 +56,7 @@ func Start() (*PG, error) {
 	}
 
 	// Start PostgreSQL
-	main, err := exec.LookPath("postgres")
-	if err != nil {
-		return nil, err
-	}
-
-	cmd := exec.Command(main,
+	cmd := exec.Command(path.Join(binPath, "postgres"),
 		"-D", dataDir, // Data directory
 		"-k", sockDir, // Location for the UNIX socket
 		"-h", "", // Disable TCP listening
@@ -123,6 +124,17 @@ func (p *PG) Stop() error {
 	}
 
 	return nil
+}
+
+// Needed because Ubuntu doesn't put initdb in $PATH
+func findBinPath() (string, error) {
+	// In $PATH (e.g. Fedora) great!
+	p, err := exec.LookPath("initdb")
+	if err == nil {
+		return path.Dir(p), nil
+	}
+
+	return "", fmt.Errorf("Did not find PostgreSQL executables installed")
 }
 
 func makeDSN(sockDir, dbname string) string {
