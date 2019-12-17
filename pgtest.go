@@ -19,6 +19,13 @@ type PG struct {
 	DB  *sql.DB
 }
 
+// Start a new PostgreSQL database, on temporary storage.
+//
+// This database has fsync disabled for performance, so it might run faster
+// than your production database. This makes it less reliable in case of system
+// crashes, but we don't care about that anyway during unit testing.
+//
+// Use the DB field to access the database connection
 func Start() (*PG, error) {
 	// Prepare data directory
 	dir, err := ioutil.TempDir("", "pgtest")
@@ -107,6 +114,7 @@ func Start() (*PG, error) {
 	return pg, nil
 }
 
+// Stop the database and remove storage files.
 func (p *PG) Stop() error {
 	defer func() {
 		// Always try to remove it
