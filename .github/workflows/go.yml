@@ -18,7 +18,6 @@ jobs:
     - name: Install PostgreSQL
       run: |
         sudo apt install postgresql
-        postgres --version
 
     - name: Get dependencies
       run: |
