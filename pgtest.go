@@ -13,7 +13,6 @@ import (
 	"path"
 	"time"
 
-	"github.com/eapache/go-resiliency/retrier"
 	_ "github.com/lib/pq"
 )
 
@@ -87,11 +86,10 @@ func Start() (*PG, error) {
 	}
 
 	// Prepare test database
-	r := retrier.New(retrier.ConstantBackoff(1000, 10*time.Millisecond), nil)
-	err = r.Run(func() error {
+	err = retry(func() error {
 		_, err := db.Exec("CREATE DATABASE test")
 		return err
-	})
+	}, 1000, 10*time.Millisecond)
 	if err != nil {
 		return nil, err
 	}
@@ -181,4 +179,20 @@ func findBinPath() (string, error) {
 
 func makeDSN(sockDir, dbname string) string {
 	return fmt.Sprintf("host=%s dbname=%s", sockDir, dbname)
+}
+
+func retry(fn func() error, attempts int, interval time.Duration) error {
+	for {
+		err := fn()
+		if err == nil {
+			return nil
+		}
+
+		attempts -= 1
+		if attempts <= 0 {
+			return err
+		}
+
+		time.Sleep(interval)
+	}
 }
