@@ -134,6 +134,36 @@ func findBinPath() (string, error) {
 		return path.Dir(p), nil
 	}
 
+	// Look for a PostgreSQL in one of the folders Ubuntu uses
+	folders := []string{
+		"/usr/lib/postgresql/",
+	}
+	for _, folder := range folders {
+		f, err := os.Stat(folder)
+		if os.IsNotExist(err) {
+			continue
+		}
+		if !f.IsDir() {
+			continue
+		}
+
+		files, err := ioutil.ReadDir(folder)
+		if err != nil {
+			return "", err
+		}
+		for _, fi := range files {
+			if !fi.IsDir() {
+				continue
+			}
+
+			binPath := path.Join(folder, fi.Name(), "bin")
+			_, err := os.Stat(path.Join(binPath, "initdb"))
+			if err == nil {
+				return binPath, nil
+			}
+		}
+	}
+
 	return "", fmt.Errorf("Did not find PostgreSQL executables installed")
 }
 
