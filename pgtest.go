@@ -81,6 +81,11 @@ func Start() (*PG, error) {
 	}
 
 	if isRoot {
+		err = os.Chmod(dir, 0711)
+		if err != nil {
+			return nil, err
+		}
+
 		err = os.Chown(dataDir, pgUID, pgGID)
 		if err != nil {
 			return nil, err
