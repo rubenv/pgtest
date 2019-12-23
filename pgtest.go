@@ -7,6 +7,7 @@ package pgtest
 import (
 	"database/sql"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -23,6 +24,9 @@ type PG struct {
 	dir string
 	cmd *exec.Cmd
 	DB  *sql.DB
+
+	stderr io.ReadCloser
+	stdout io.ReadCloser
 }
 
 // Start a new PostgreSQL database, on temporary storage.
@@ -120,9 +124,21 @@ func Start() (*PG, error) {
 		"-h", "", // Disable TCP listening
 		"-F", // No fsync, just go fast
 	)
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return nil, err
+	}
+
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		stderr.Close()
+		return nil, err
+	}
 
 	err = cmd.Start()
 	if err != nil {
+		stderr.Close()
+		stdout.Close()
 		return nil, fmt.Errorf("Failed to start PostgreSQL: %w", err)
 	}
 
@@ -130,7 +146,11 @@ func Start() (*PG, error) {
 	dsn := makeDSN(sockDir, "postgres")
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
-		return nil, err
+		serr, _ := ioutil.ReadAll(stderr)
+		sout, _ := ioutil.ReadAll(stdout)
+		stderr.Close()
+		stdout.Close()
+		return nil, fmt.Errorf("Failed to connect to DB: %s\nOUT: %s\nERR: %s", err, string(sout), string(serr))
 	}
 
 	// Prepare test database
@@ -139,11 +159,17 @@ func Start() (*PG, error) {
 		return err
 	}, 1000, 10*time.Millisecond)
 	if err != nil {
-		return nil, err
+		serr, _ := ioutil.ReadAll(stderr)
+		sout, _ := ioutil.ReadAll(stdout)
+		stderr.Close()
+		stdout.Close()
+		return nil, fmt.Errorf("Failed to initialize DB: %s\nOUT: %s\nERR: %s", err, string(sout), string(serr))
 	}
 
 	err = db.Close()
 	if err != nil {
+		stderr.Close()
+		stdout.Close()
 		return nil, err
 	}
 
@@ -151,6 +177,8 @@ func Start() (*PG, error) {
 	dsn = makeDSN(sockDir, "test")
 	db, err = sql.Open("postgres", dsn)
 	if err != nil {
+		stderr.Close()
+		stdout.Close()
 		return nil, err
 	}
 
@@ -159,6 +187,9 @@ func Start() (*PG, error) {
 		dir: dir,
 
 		DB: db,
+
+		stderr: stderr,
+		stdout: stdout,
 	}
 
 	return pg, nil
@@ -183,6 +214,14 @@ func (p *PG) Stop() error {
 	err = p.cmd.Wait()
 	if err != nil {
 		return err
+	}
+
+	if p.stderr != nil {
+		p.stderr.Close()
+	}
+
+	if p.stdout != nil {
+		p.stdout.Close()
 	}
 
 	return nil
