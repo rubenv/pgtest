@@ -7,6 +7,13 @@
 Spawns a PostgreSQL server with a single database configured. Ideal for unit
 tests where you want a clean instance each time. Then clean up afterwards.
 
+Features:
+
+* Starts a clean isolated PostgreSQL database
+* Tested on Fedora, Ubuntu and Alpine
+* Optimized for in-memory execution, to speed up unit tests
+* Less than 1 second startup / initialization time
+
 ## Usage
 
 In your unit test:
