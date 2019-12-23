@@ -13,6 +13,7 @@ import (
 	"os/user"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	_ "github.com/lib/pq"
@@ -248,10 +249,10 @@ func prepareCommand(isRoot bool, command string, args ...string) *exec.Cmd {
 		return exec.Command(command, args...)
 	}
 
-	a := append([]string{
+	return exec.Command("su",
 		"-",
 		"postgres",
-		command,
-	}, args...)
-	return exec.Command("su", a...)
+		"-c",
+		strings.Join(append([]string{command}, args...), " "),
+	)
 }
