@@ -14,6 +14,9 @@ func TestPostgreSQL(t *testing.T) {
 	assert.NoError(err)
 	assert.NotNil(pg)
 
+	_, err = pg.DB.Exec("CREATE TABLE test (val text)")
+	assert.NoError(err)
+
 	err = pg.Stop()
 	assert.NoError(err)
 }
