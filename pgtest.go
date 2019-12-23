@@ -62,7 +62,11 @@ func Start() (*PG, error) {
 	)
 	err = init.Run()
 	if err != nil {
-		return nil, fmt.Errorf("Failed to initialize DB: %w", err)
+		out, e := init.CombinedOutput()
+		if e != nil {
+			return nil, fmt.Errorf("Failed to initialize DB, could not fetch output: %w / %w", err, e)
+		}
+		return nil, fmt.Errorf("Failed to initialize DB: %w -> %s", err, string(out))
 	}
 
 	// Start PostgreSQL
