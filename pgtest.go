@@ -60,12 +60,8 @@ func Start() (*PG, error) {
 		"-D", dataDir,
 		"--no-sync",
 	)
-	err = init.Run()
+	out, err := init.CombinedOutput()
 	if err != nil {
-		out, e := init.CombinedOutput()
-		if e != nil {
-			return nil, fmt.Errorf("Failed to initialize DB, could not fetch output: %w / %w", err, e)
-		}
 		return nil, fmt.Errorf("Failed to initialize DB: %w -> %s", err, string(out))
 	}
 
