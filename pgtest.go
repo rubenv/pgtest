@@ -279,6 +279,12 @@ func prepareCommand(isRoot bool, command string, args ...string) *exec.Cmd {
 		return exec.Command(command, args...)
 	}
 
+	for i, a := range args {
+		if a == "" {
+			args[i] = "''"
+		}
+	}
+
 	return exec.Command("su",
 		"-",
 		"postgres",
