@@ -118,6 +118,10 @@ func Start() (*PG, error) {
 
 // Stop the database and remove storage files.
 func (p *PG) Stop() error {
+	if p == nil {
+		return nil
+	}
+
 	defer func() {
 		// Always try to remove it
 		os.RemoveAll(p.dir)
