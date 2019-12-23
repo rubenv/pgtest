@@ -137,20 +137,14 @@ func Start() (*PG, error) {
 
 	err = cmd.Start()
 	if err != nil {
-		stderr.Close()
-		stdout.Close()
-		return nil, fmt.Errorf("Failed to start PostgreSQL: %w", err)
+		return nil, abort("Failed to start PostgreSQL", cmd, stderr, stdout, err)
 	}
 
 	// Connect to DB
 	dsn := makeDSN(sockDir, "postgres")
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
-		serr, _ := ioutil.ReadAll(stderr)
-		sout, _ := ioutil.ReadAll(stdout)
-		stderr.Close()
-		stdout.Close()
-		return nil, fmt.Errorf("Failed to connect to DB: %s\nOUT: %s\nERR: %s", err, string(sout), string(serr))
+		return nil, abort("Failed to connect to DB", cmd, stderr, stdout, err)
 	}
 
 	// Prepare test database
@@ -159,27 +153,19 @@ func Start() (*PG, error) {
 		return err
 	}, 1000, 10*time.Millisecond)
 	if err != nil {
-		serr, _ := ioutil.ReadAll(stderr)
-		sout, _ := ioutil.ReadAll(stdout)
-		stderr.Close()
-		stdout.Close()
-		return nil, fmt.Errorf("Failed to initialize DB: %s\nOUT: %s\nERR: %s", err, string(sout), string(serr))
+		return nil, abort("Failed to initialize DB", cmd, stderr, stdout, err)
 	}
 
 	err = db.Close()
 	if err != nil {
-		stderr.Close()
-		stdout.Close()
-		return nil, err
+		return nil, abort("Failed to disconnect", cmd, stderr, stdout, err)
 	}
 
 	// Connect to it properly
 	dsn = makeDSN(sockDir, "test")
 	db, err = sql.Open("postgres", dsn)
 	if err != nil {
-		stderr.Close()
-		stdout.Close()
-		return nil, err
+		return nil, abort("Failed to connect to test DB", cmd, stderr, stdout, err)
 	}
 
 	pg := &PG{
@@ -299,4 +285,15 @@ func prepareCommand(isRoot bool, command string, args ...string) *exec.Cmd {
 		"-c",
 		strings.Join(append([]string{command}, args...), " "),
 	)
+}
+
+func abort(msg string, cmd *exec.Cmd, stderr, stdout io.ReadCloser, err error) error {
+	cmd.Process.Signal(os.Interrupt)
+	cmd.Wait()
+
+	serr, _ := ioutil.ReadAll(stderr)
+	sout, _ := ioutil.ReadAll(stdout)
+	stderr.Close()
+	stdout.Close()
+	return fmt.Errorf("%s: %s\nOUT: %s\nERR: %s", msg, err, string(sout), string(serr))
 }
