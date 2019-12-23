@@ -141,7 +141,7 @@ func Start() (*PG, error) {
 	}
 
 	// Connect to DB
-	dsn := makeDSN(sockDir, "postgres")
+	dsn := makeDSN(sockDir, "postgres", isRoot)
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		return nil, abort("Failed to connect to DB", cmd, stderr, stdout, err)
@@ -162,7 +162,7 @@ func Start() (*PG, error) {
 	}
 
 	// Connect to it properly
-	dsn = makeDSN(sockDir, "test")
+	dsn = makeDSN(sockDir, "test", isRoot)
 	db, err = sql.Open("postgres", dsn)
 	if err != nil {
 		return nil, abort("Failed to connect to test DB", cmd, stderr, stdout, err)
@@ -254,8 +254,12 @@ func findBinPath() (string, error) {
 	return "", fmt.Errorf("Did not find PostgreSQL executables installed")
 }
 
-func makeDSN(sockDir, dbname string) string {
-	return fmt.Sprintf("host=%s dbname=%s", sockDir, dbname)
+func makeDSN(sockDir, dbname string, isRoot bool) string {
+	user := ""
+	if isRoot {
+		user = "user=postgres"
+	}
+	return fmt.Sprintf("host=%s dbname=%s %s", sockDir, dbname, user)
 }
 
 func retry(fn func() error, attempts int, interval time.Duration) error {
