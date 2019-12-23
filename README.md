@@ -13,6 +13,7 @@ Features:
 * Tested on Fedora, Ubuntu and Alpine
 * Optimized for in-memory execution, to speed up unit tests
 * Less than 1 second startup / initialization time
+* Automatically drops permissions when testing as root
 
 ## Usage
 
