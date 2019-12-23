@@ -10,7 +10,9 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"os/user"
 	"path"
+	"strconv"
 	"time"
 
 	_ "github.com/lib/pq"
@@ -30,6 +32,34 @@ type PG struct {
 //
 // Use the DB field to access the database connection
 func Start() (*PG, error) {
+	// Handle dropping permissions when running as root
+	me, err := user.Current()
+	if err != nil {
+		return nil, err
+	}
+	isRoot := me.Username == "root"
+
+	pgUID := int(0)
+	pgGID := int(0)
+	if isRoot {
+		pgUser, err := user.Lookup("postgres")
+		if err != nil {
+			return nil, fmt.Errorf("Could not find postgres user, which is required when running as root: %s", err)
+		}
+
+		uid, err := strconv.ParseInt(pgUser.Uid, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		pgUID = int(uid)
+
+		gid, err := strconv.ParseInt(pgUser.Gid, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		pgGID = int(gid)
+	}
+
 	// Prepare data directory
 	dir, err := ioutil.TempDir("", "pgtest")
 	if err != nil {
@@ -39,14 +69,26 @@ func Start() (*PG, error) {
 	dataDir := path.Join(dir, "data")
 	sockDir := path.Join(dir, "sock")
 
-	err = os.MkdirAll(dataDir, 0700)
+	err = os.MkdirAll(dataDir, 0711)
 	if err != nil {
 		return nil, err
 	}
 
-	err = os.MkdirAll(sockDir, 0700)
+	err = os.MkdirAll(sockDir, 0711)
 	if err != nil {
 		return nil, err
+	}
+
+	if isRoot {
+		err = os.Chown(dataDir, pgUID, pgGID)
+		if err != nil {
+			return nil, err
+		}
+
+		err = os.Chown(sockDir, pgUID, pgGID)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Find executables root path
@@ -56,7 +98,7 @@ func Start() (*PG, error) {
 	}
 
 	// Initialize PostgreSQL data directory
-	init := exec.Command(path.Join(binPath, "initdb"),
+	init := prepareCommand(isRoot, path.Join(binPath, "initdb"),
 		"-D", dataDir,
 		"--no-sync",
 	)
@@ -66,7 +108,7 @@ func Start() (*PG, error) {
 	}
 
 	// Start PostgreSQL
-	cmd := exec.Command(path.Join(binPath, "postgres"),
+	cmd := prepareCommand(isRoot, path.Join(binPath, "postgres"),
 		"-D", dataDir, // Data directory
 		"-k", sockDir, // Location for the UNIX socket
 		"-h", "", // Disable TCP listening
@@ -199,4 +241,17 @@ func retry(fn func() error, attempts int, interval time.Duration) error {
 
 		time.Sleep(interval)
 	}
+}
+
+func prepareCommand(isRoot bool, command string, args ...string) *exec.Cmd {
+	if !isRoot {
+		return exec.Command(command, args...)
+	}
+
+	a := append([]string{
+		"-",
+		"postgres",
+		command,
+	}, args...)
+	return exec.Command("su", a...)
 }
