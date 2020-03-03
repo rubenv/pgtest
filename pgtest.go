@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"os/user"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -71,8 +72,8 @@ func Start() (*PG, error) {
 		return nil, err
 	}
 
-	dataDir := path.Join(dir, "data")
-	sockDir := path.Join(dir, "sock")
+	dataDir := filepath.Join(dir, "data")
+	sockDir := filepath.Join(dir, "sock")
 
 	err = os.MkdirAll(dataDir, 0711)
 	if err != nil {
@@ -118,7 +119,7 @@ func Start() (*PG, error) {
 	}
 
 	// Start PostgreSQL
-	cmd := prepareCommand(isRoot, path.Join(binPath, "postgres"),
+	cmd := prepareCommand(isRoot, filepath.Join(binPath, "postgres"),
 		"-D", dataDir, // Data directory
 		"-k", sockDir, // Location for the UNIX socket
 		"-h", "", // Disable TCP listening
@@ -243,8 +244,8 @@ func findBinPath() (string, error) {
 				continue
 			}
 
-			binPath := path.Join(folder, fi.Name(), "bin")
-			_, err := os.Stat(path.Join(binPath, "initdb"))
+			binPath := filepath.Join(folder, fi.Name(), "bin")
+			_, err := os.Stat(filepath.Join(binPath, "initdb"))
 			if err == nil {
 				return binPath, nil
 			}
