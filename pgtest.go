@@ -26,6 +26,8 @@ type PG struct {
 	cmd *exec.Cmd
 	DB  *sql.DB
 
+	persistent bool
+
 	stderr io.ReadCloser
 	stdout io.ReadCloser
 }
@@ -38,6 +40,20 @@ type PG struct {
 //
 // Use the DB field to access the database connection
 func Start() (*PG, error) {
+	return start(false, "")
+}
+
+// Starts a new PostgreSQL database
+//
+// Will listen on a unix socket and initialize the database in the given
+// folder, if needed. Data isn't removed when calling Stop(), so this database
+// can be used multiple times. Allows using PostgreSQL as an embedded databases
+// (such as SQLite). Not for production usage!
+func StartPersistent(folder string) (*PG, error) {
+	return start(true, folder)
+}
+
+func start(persistent bool, folder string) (*PG, error) {
 	// Handle dropping permissions when running as root
 	me, err := user.Current()
 	if err != nil {
@@ -67,9 +83,13 @@ func Start() (*PG, error) {
 	}
 
 	// Prepare data directory
-	dir, err := ioutil.TempDir("", "pgtest")
-	if err != nil {
-		return nil, err
+	dir := folder
+	if folder == "" {
+		d, err := ioutil.TempDir("", "pgtest")
+		if err != nil {
+			return nil, err
+		}
+		dir = d
 	}
 
 	dataDir := filepath.Join(dir, "data")
@@ -109,13 +129,16 @@ func Start() (*PG, error) {
 	}
 
 	// Initialize PostgreSQL data directory
-	init := prepareCommand(isRoot, path.Join(binPath, "initdb"),
-		"-D", dataDir,
-		"--no-sync",
-	)
-	out, err := init.CombinedOutput()
-	if err != nil {
-		return nil, fmt.Errorf("Failed to initialize DB: %w -> %s", err, string(out))
+	_, err = os.Stat(filepath.Join(dataDir, "postgresql.conf"))
+	if os.IsNotExist(err) {
+		init := prepareCommand(isRoot, filepath.Join(binPath, "initdb"),
+			"-D", dataDir,
+			"--no-sync",
+		)
+		out, err := init.CombinedOutput()
+		if err != nil {
+			return nil, fmt.Errorf("Failed to initialize DB: %w -> %s", err, string(out))
+		}
 	}
 
 	// Start PostgreSQL
@@ -150,6 +173,12 @@ func Start() (*PG, error) {
 
 	// Prepare test database
 	err = retry(func() error {
+		var exists bool
+		err = db.QueryRow("SELECT 1 FROM pg_database WHERE datname = 'test'").Scan(&exists)
+		if exists {
+			return nil
+		}
+
 		_, err := db.Exec("CREATE DATABASE test")
 		return err
 	}, 1000, 10*time.Millisecond)
@@ -175,6 +204,8 @@ func Start() (*PG, error) {
 
 		DB: db,
 
+		persistent: persistent,
+
 		stderr: stderr,
 		stdout: stdout,
 	}
@@ -188,10 +219,12 @@ func (p *PG) Stop() error {
 		return nil
 	}
 
-	defer func() {
-		// Always try to remove it
-		os.RemoveAll(p.dir)
-	}()
+	if !p.persistent {
+		defer func() {
+			// Always try to remove it
+			os.RemoveAll(p.dir)
+		}()
+	}
 
 	err := p.cmd.Process.Signal(os.Interrupt)
 	if err != nil {
