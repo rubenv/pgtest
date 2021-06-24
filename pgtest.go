@@ -40,7 +40,15 @@ type PG struct {
 //
 // Use the DB field to access the database connection
 func Start() (*PG, error) {
-	return start(false, "")
+	return start(false, "", "")
+}
+
+func StartFrom(cmdDir string) (*PG, error) {
+	return start(false, "", cmdDir)
+}
+
+func StartPersistentFrom(cmdDir, folder string) (*PG, error) {
+	return start(true, folder, cmdDir)
 }
 
 // Starts a new PostgreSQL database
@@ -50,10 +58,10 @@ func Start() (*PG, error) {
 // can be used multiple times. Allows using PostgreSQL as an embedded databases
 // (such as SQLite). Not for production usage!
 func StartPersistent(folder string) (*PG, error) {
-	return start(true, folder)
+	return start(true, folder, "")
 }
 
-func start(persistent bool, folder string) (*PG, error) {
+func start(persistent bool, folder, cmdDir string) (*PG, error) {
 	// Handle dropping permissions when running as root
 	me, err := user.Current()
 	if err != nil {
@@ -123,7 +131,7 @@ func start(persistent bool, folder string) (*PG, error) {
 	}
 
 	// Find executables root path
-	binPath, err := findBinPath()
+	binPath, err := findBinPath(cmdDir)
 	if err != nil {
 		return nil, err
 	}
@@ -248,15 +256,19 @@ func (p *PG) Stop() error {
 }
 
 // Needed because Ubuntu doesn't put initdb in $PATH
-func findBinPath() (string, error) {
+// cmdDir a path to a directory that contains postgresql binaries
+func findBinPath(cmdDir string) (string, error) {
 	// In $PATH (e.g. Fedora) great!
-	p, err := exec.LookPath("initdb")
-	if err == nil {
-		return path.Dir(p), nil
+	if cmdDir == "" {
+		p, err := exec.LookPath("initdb")
+		if err == nil {
+			return path.Dir(p), nil
+		}
 	}
 
 	// Look for a PostgreSQL in one of the folders Ubuntu uses
 	folders := []string{
+		cmdDir,
 		"/usr/lib/postgresql/",
 	}
 	for _, folder := range folders {
@@ -273,6 +285,10 @@ func findBinPath() (string, error) {
 			return "", err
 		}
 		for _, fi := range files {
+			if !fi.IsDir() && "initdb" == fi.Name() {
+				return filepath.Join(folder), nil
+			}
+
 			if !fi.IsDir() {
 				continue
 			}
