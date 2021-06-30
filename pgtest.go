@@ -39,29 +39,29 @@ type PG struct {
 // crashes, but we don't care about that anyway during unit testing.
 //
 // Use the DB field to access the database connection
-func Start() (*PG, error) {
-	return start(false, "", "")
+func Start(config ...*PGConfig) (*PG, error) {
+
+	if len(config) < 1 {
+		cfg := &PGConfig{
+			Folder:     "",
+			Dir:        "",
+			Persistent: false,
+		}
+		return start(cfg)
+	}
+
+	return start(config[0])
 }
 
-func StartFrom(cmdDir string) (*PG, error) {
-	return start(false, "", cmdDir)
-}
-
-func StartPersistentFrom(cmdDir, folder string) (*PG, error) {
-	return start(true, folder, cmdDir)
-}
-
-// Starts a new PostgreSQL database
+// start Starts a new PostgreSQL database
 //
 // Will listen on a unix socket and initialize the database in the given
-// folder, if needed. Data isn't removed when calling Stop(), so this database
+// folder (cionfig.Dir), if needed.
+// Data isn't removed when calling Stop() if config.Persistent == true,
+// so this database
 // can be used multiple times. Allows using PostgreSQL as an embedded databases
 // (such as SQLite). Not for production usage!
-func StartPersistent(folder string) (*PG, error) {
-	return start(true, folder, "")
-}
-
-func start(persistent bool, folder, cmdDir string) (*PG, error) {
+func start(config *PGConfig) (*PG, error) {
 	// Handle dropping permissions when running as root
 	me, err := user.Current()
 	if err != nil {
@@ -91,8 +91,8 @@ func start(persistent bool, folder, cmdDir string) (*PG, error) {
 	}
 
 	// Prepare data directory
-	dir := folder
-	if folder == "" {
+	dir := config.Dir
+	if config.Dir == "" {
 		d, err := ioutil.TempDir("", "pgtest")
 		if err != nil {
 			return nil, err
@@ -131,7 +131,7 @@ func start(persistent bool, folder, cmdDir string) (*PG, error) {
 	}
 
 	// Find executables root path
-	binPath, err := findBinPath(cmdDir)
+	binPath, err := findBinPath(config.Folder)
 	if err != nil {
 		return nil, err
 	}
@@ -212,7 +212,7 @@ func start(persistent bool, folder, cmdDir string) (*PG, error) {
 
 		DB: db,
 
-		persistent: persistent,
+		persistent: config.Persistent,
 
 		stderr: stderr,
 		stdout: stdout,
@@ -256,10 +256,10 @@ func (p *PG) Stop() error {
 }
 
 // Needed because Ubuntu doesn't put initdb in $PATH
-// cmdDir a path to a directory that contains postgresql binaries
-func findBinPath(cmdDir string) (string, error) {
+// binDir a path to a directory that contains postgresql binaries
+func findBinPath(binDir string) (string, error) {
 	// In $PATH (e.g. Fedora) great!
-	if cmdDir == "" {
+	if binDir == "" {
 		p, err := exec.LookPath("initdb")
 		if err == nil {
 			return path.Dir(p), nil
@@ -268,7 +268,7 @@ func findBinPath(cmdDir string) (string, error) {
 
 	// Look for a PostgreSQL in one of the folders Ubuntu uses
 	folders := []string{
-		cmdDir,
+		binDir,
 		"/usr/lib/postgresql/",
 	}
 	for _, folder := range folders {
