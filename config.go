@@ -1,9 +1,9 @@
 package pgtest
 
 type PGConfig struct {
-	BinDir       string
-	Dir          string
-	IsPersistent bool
+	BinDir       string // Directory to look for postgresql binaries including initdb, postgres
+	Dir          string // Directory for storing database files, removed for non-persistent configs
+	IsPersistent bool   // Whether to make the current configuraton persistent or not
 }
 
 func NewConfig() *PGConfig {
