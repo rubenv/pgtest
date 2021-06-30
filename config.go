@@ -1,30 +1,35 @@
 package pgtest
 
 type PGConfig struct {
-	Folder     string
-	Dir        string
-	Persistent bool
+	BinDir       string
+	Dir          string
+	IsPersistent bool
 }
 
 func NewConfig() *PGConfig {
 	return &PGConfig{
-		Folder:     "",
-		Dir:        "",
-		Persistent: false,
+		BinDir:       "",
+		Dir:          "",
+		IsPersistent: false,
 	}
 }
 
-func (c *PGConfig) WithPersistent() *PGConfig {
-	c.Persistent = true
+func (c *PGConfig) Persistent() *PGConfig {
+	c.IsPersistent = true
 	return c
 }
 
-func (c *PGConfig) WithBinDir(dir string) *PGConfig {
-	c.Folder = dir
+func (c *PGConfig) From(dir string) *PGConfig {
+	c.BinDir = dir
 	return c
 }
 
-func (c *PGConfig) WithDataDir(dir string) *PGConfig {
+func (c *PGConfig) UseBinariesIn(dir string) *PGConfig {
+	c.BinDir = dir
+	return c
+}
+
+func (c *PGConfig) DataDir(dir string) *PGConfig {
 	c.Dir = dir
 	return c
 }

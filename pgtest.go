@@ -42,12 +42,7 @@ type PG struct {
 func Start(config ...*PGConfig) (*PG, error) {
 
 	if len(config) < 1 {
-		cfg := &PGConfig{
-			Folder:     "",
-			Dir:        "",
-			Persistent: false,
-		}
-		return start(cfg)
+		return start(NewConfig())
 	}
 
 	return start(config[0])
@@ -131,7 +126,7 @@ func start(config *PGConfig) (*PG, error) {
 	}
 
 	// Find executables root path
-	binPath, err := findBinPath(config.Folder)
+	binPath, err := findBinPath(config.BinDir)
 	if err != nil {
 		return nil, err
 	}
@@ -212,7 +207,7 @@ func start(config *PGConfig) (*PG, error) {
 
 		DB: db,
 
-		persistent: config.Persistent,
+		persistent: config.IsPersistent,
 
 		stderr: stderr,
 		stdout: stdout,
