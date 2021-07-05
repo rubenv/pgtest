@@ -39,13 +39,18 @@ type PG struct {
 // crashes, but we don't care about that anyway during unit testing.
 //
 // Use the DB field to access the database connection
-func Start(config ...*PGConfig) (*PG, error) {
+func Start() (*PG, error) {
+	return start(New())
+}
 
-	if len(config) < 1 {
-		return start(NewConfig())
-	}
-
-	return start(config[0])
+// Starts a new PostgreSQL database
+//
+// Will listen on a unix socket and initialize the database in the given
+// folder, if needed. Data isn't removed when calling Stop(), so this database
+// can be used multiple times. Allows using PostgreSQL as an embedded databases
+// (such as SQLite). Not for production usage!
+func StartPersistent(folder string) (*PG, error) {
+	return start(New().DataDir(folder).Persistent())
 }
 
 // start Starts a new PostgreSQL database

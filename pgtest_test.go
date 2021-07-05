@@ -25,12 +25,11 @@ func TestPostgreSQL(t *testing.T) {
 	assert.NoError(err)
 }
 
-func TestPostgreSQLFromPath(t *testing.T) {
+func TestPostgreSQLWithConfig(t *testing.T) {
 	t.Parallel()
 
 	assert := assert.New(t)
-	config := pgtest.NewConfig().From("/usr/bin/")
-	pg, err := pgtest.Start(config)
+	pg, err := pgtest.New().From("/usr/bin/").Start()
 	assert.NoError(err)
 	assert.NotNil(pg)
 
@@ -49,8 +48,8 @@ func TestPersistent(t *testing.T) {
 	dir, err := ioutil.TempDir("", "pgtest")
 	assert.NoError(err)
 	defer os.RemoveAll(dir)
-	config := pgtest.NewConfig().Persistent().DataDir(dir)
-	pg, err := pgtest.Start(config)
+
+	pg, err := pgtest.StartPersistent(dir)
 	assert.NoError(err)
 	assert.NotNil(pg)
 
@@ -64,7 +63,7 @@ func TestPersistent(t *testing.T) {
 	assert.NoError(err)
 
 	// Open it again
-	pg, err = pgtest.Start(config)
+	pg, err = pgtest.StartPersistent(dir)
 	assert.NoError(err)
 	assert.NotNil(pg)
 

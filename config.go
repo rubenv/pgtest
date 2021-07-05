@@ -6,7 +6,7 @@ type PGConfig struct {
 	IsPersistent bool   // Whether to make the current configuraton persistent or not
 }
 
-func NewConfig() *PGConfig {
+func New() *PGConfig {
 	return &PGConfig{
 		BinDir:       "",
 		Dir:          "",
@@ -32,4 +32,8 @@ func (c *PGConfig) UseBinariesIn(dir string) *PGConfig {
 func (c *PGConfig) DataDir(dir string) *PGConfig {
 	c.Dir = dir
 	return c
+}
+
+func (c *PGConfig) Start() (*PG, error) {
+	return start(c)
 }

@@ -10,7 +10,7 @@ import (
 func TestPGConfig(t *testing.T) {
 	assert := assert.New(t)
 
-	config := pgtest.NewConfig().From("/usr/bin").DataDir("/tmp/data").Persistent()
+	config := pgtest.New().From("/usr/bin").DataDir("/tmp/data").Persistent()
 
 	assert.True(config.IsPersistent)
 	assert.EqualValues("/tmp/data", config.Dir)
