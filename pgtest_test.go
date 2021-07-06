@@ -25,6 +25,21 @@ func TestPostgreSQL(t *testing.T) {
 	assert.NoError(err)
 }
 
+func TestPostgreSQLWithConfig(t *testing.T) {
+	t.Parallel()
+
+	assert := assert.New(t)
+	pg, err := pgtest.New().From("/usr/bin/").Start()
+	assert.NoError(err)
+	assert.NotNil(pg)
+
+	_, err = pg.DB.Exec("CREATE TABLE test (val text)")
+	assert.NoError(err)
+
+	err = pg.Stop()
+	assert.NoError(err)
+}
+
 func TestPersistent(t *testing.T) {
 	t.Parallel()
 

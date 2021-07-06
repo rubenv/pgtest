@@ -40,7 +40,7 @@ type PG struct {
 //
 // Use the DB field to access the database connection
 func Start() (*PG, error) {
-	return start(false, "")
+	return start(New())
 }
 
 // Starts a new PostgreSQL database
@@ -50,10 +50,18 @@ func Start() (*PG, error) {
 // can be used multiple times. Allows using PostgreSQL as an embedded databases
 // (such as SQLite). Not for production usage!
 func StartPersistent(folder string) (*PG, error) {
-	return start(true, folder)
+	return start(New().DataDir(folder).Persistent())
 }
 
-func start(persistent bool, folder string) (*PG, error) {
+// start Starts a new PostgreSQL database
+//
+// Will listen on a unix socket and initialize the database in the given
+// folder (config.Dir), if needed.
+// Data isn't removed when calling Stop() if config.Persistent == true,
+// so this database
+// can be used multiple times. Allows using PostgreSQL as an embedded databases
+// (such as SQLite). Not for production usage!
+func start(config *PGConfig) (*PG, error) {
 	// Handle dropping permissions when running as root
 	me, err := user.Current()
 	if err != nil {
@@ -83,8 +91,8 @@ func start(persistent bool, folder string) (*PG, error) {
 	}
 
 	// Prepare data directory
-	dir := folder
-	if folder == "" {
+	dir := config.Dir
+	if config.Dir == "" {
 		d, err := ioutil.TempDir("", "pgtest")
 		if err != nil {
 			return nil, err
@@ -123,7 +131,7 @@ func start(persistent bool, folder string) (*PG, error) {
 	}
 
 	// Find executables root path
-	binPath, err := findBinPath()
+	binPath, err := findBinPath(config.BinDir)
 	if err != nil {
 		return nil, err
 	}
@@ -204,7 +212,7 @@ func start(persistent bool, folder string) (*PG, error) {
 
 		DB: db,
 
-		persistent: persistent,
+		persistent: config.IsPersistent,
 
 		stderr: stderr,
 		stdout: stdout,
@@ -248,15 +256,19 @@ func (p *PG) Stop() error {
 }
 
 // Needed because Ubuntu doesn't put initdb in $PATH
-func findBinPath() (string, error) {
+// binDir a path to a directory that contains postgresql binaries
+func findBinPath(binDir string) (string, error) {
 	// In $PATH (e.g. Fedora) great!
-	p, err := exec.LookPath("initdb")
-	if err == nil {
-		return path.Dir(p), nil
+	if binDir == "" {
+		p, err := exec.LookPath("initdb")
+		if err == nil {
+			return path.Dir(p), nil
+		}
 	}
 
 	// Look for a PostgreSQL in one of the folders Ubuntu uses
 	folders := []string{
+		binDir,
 		"/usr/lib/postgresql/",
 	}
 	for _, folder := range folders {
@@ -273,6 +285,10 @@ func findBinPath() (string, error) {
 			return "", err
 		}
 		for _, fi := range files {
+			if !fi.IsDir() && "initdb" == fi.Name() {
+				return filepath.Join(folder), nil
+			}
+
 			if !fi.IsDir() {
 				continue
 			}
