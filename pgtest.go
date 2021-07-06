@@ -56,7 +56,7 @@ func StartPersistent(folder string) (*PG, error) {
 // start Starts a new PostgreSQL database
 //
 // Will listen on a unix socket and initialize the database in the given
-// folder (cionfig.Dir), if needed.
+// folder (config.Dir), if needed.
 // Data isn't removed when calling Stop() if config.Persistent == true,
 // so this database
 // can be used multiple times. Allows using PostgreSQL as an embedded databases
