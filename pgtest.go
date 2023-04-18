@@ -8,7 +8,6 @@ import (
 	"database/sql"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"os/user"
@@ -93,7 +92,7 @@ func start(config *PGConfig) (*PG, error) {
 	// Prepare data directory
 	dir := config.Dir
 	if config.Dir == "" {
-		d, err := ioutil.TempDir("", "pgtest")
+		d, err := os.MkdirTemp("", "pgtest")
 		if err != nil {
 			return nil, err
 		}
@@ -280,7 +279,7 @@ func findBinPath(binDir string) (string, error) {
 			continue
 		}
 
-		files, err := ioutil.ReadDir(folder)
+		files, err := os.ReadDir(folder)
 		if err != nil {
 			return "", err
 		}
@@ -351,8 +350,8 @@ func abort(msg string, cmd *exec.Cmd, stderr, stdout io.ReadCloser, err error) e
 	cmd.Process.Signal(os.Interrupt)
 	cmd.Wait()
 
-	serr, _ := ioutil.ReadAll(stderr)
-	sout, _ := ioutil.ReadAll(stdout)
+	serr, _ := io.ReadAll(stderr)
+	sout, _ := io.ReadAll(stdout)
 	stderr.Close()
 	stdout.Close()
 	return fmt.Errorf("%s: %s\nOUT: %s\nERR: %s", msg, err, string(sout), string(serr))
