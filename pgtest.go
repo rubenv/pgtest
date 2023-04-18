@@ -107,6 +107,11 @@ func start(config *PGConfig) (*PG, error) {
 		return nil, err
 	}
 
+	err = os.MkdirAll(sockDir, 0711)
+	if err != nil {
+		return nil, err
+	}
+
 	if isRoot {
 		err = os.Chmod(dir, 0711)
 		if err != nil {
@@ -114,6 +119,11 @@ func start(config *PGConfig) (*PG, error) {
 		}
 
 		err = os.Chown(dataDir, pgUID, pgGID)
+		if err != nil {
+			return nil, err
+		}
+
+		err = os.Chown(sockDir, pgUID, pgGID)
 		if err != nil {
 			return nil, err
 		}
@@ -135,19 +145,6 @@ func start(config *PGConfig) (*PG, error) {
 		out, err := init.CombinedOutput()
 		if err != nil {
 			return nil, fmt.Errorf("Failed to initialize DB: %w -> %s", err, string(out))
-		}
-	}
-
-	// Prepare socket folder
-	err = os.MkdirAll(sockDir, 0711)
-	if err != nil {
-		return nil, err
-	}
-
-	if isRoot {
-		err = os.Chown(sockDir, pgUID, pgGID)
-		if err != nil {
-			return nil, err
 		}
 	}
 
