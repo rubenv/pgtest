@@ -191,7 +191,7 @@ func start(config *PGConfig) (*PG, error) {
 		return err
 	}, 1000, 10*time.Millisecond)
 	if err != nil {
-		return nil, abort("Failed to initialize DB", cmd, stderr, stdout, err)
+		return nil, abort("Failed to prepare test DB", cmd, stderr, stdout, err)
 	}
 
 	err = db.Close()
