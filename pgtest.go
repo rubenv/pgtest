@@ -347,12 +347,12 @@ func prepareCommand(isRoot bool, command string, args ...string) *exec.Cmd {
 }
 
 func abort(msg string, cmd *exec.Cmd, stderr, stdout io.ReadCloser, err error) error {
-	cmd.Process.Signal(os.Interrupt)
-	cmd.Wait()
+	_ = cmd.Process.Signal(os.Interrupt)
+	_ = cmd.Wait()
 
 	serr, _ := io.ReadAll(stderr)
 	sout, _ := io.ReadAll(stdout)
-	stderr.Close()
-	stdout.Close()
+	_ = stderr.Close()
+	_ = stdout.Close()
 	return fmt.Errorf("%s: %s\nOUT: %s\nERR: %s", msg, err, string(sout), string(serr))
 }
