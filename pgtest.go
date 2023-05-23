@@ -61,6 +61,12 @@ func StartPersistent(folder string) (*PG, error) {
 // can be used multiple times. Allows using PostgreSQL as an embedded databases
 // (such as SQLite). Not for production usage!
 func start(config *PGConfig) (*PG, error) {
+	// Find executables root path
+	binPath, err := findBinPath(config.BinDir)
+	if err != nil {
+		return nil, err
+	}
+
 	// Handle dropping permissions when running as root
 	me, err := user.Current()
 	if err != nil {
@@ -127,12 +133,6 @@ func start(config *PGConfig) (*PG, error) {
 		if err != nil {
 			return nil, err
 		}
-	}
-
-	// Find executables root path
-	binPath, err := findBinPath(config.BinDir)
-	if err != nil {
-		return nil, err
 	}
 
 	// Initialize PostgreSQL data directory
