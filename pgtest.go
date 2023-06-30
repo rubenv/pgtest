@@ -25,6 +25,10 @@ type PG struct {
 	cmd *exec.Cmd
 	DB  *sql.DB
 
+	Host string
+	User string
+	Name string
+
 	persistent bool
 
 	stderr io.ReadCloser
@@ -211,6 +215,10 @@ func start(config *PGConfig) (*PG, error) {
 
 		DB: db,
 
+		Host: sockDir,
+		User: pgUser(isRoot),
+		Name: "test",
+
 		persistent: config.IsPersistent,
 
 		stderr: stderr,
@@ -303,12 +311,16 @@ func findBinPath(binDir string) (string, error) {
 	return "", fmt.Errorf("Did not find PostgreSQL executables installed")
 }
 
-func makeDSN(sockDir, dbname string, isRoot bool) string {
+func pgUser(isRoot bool) string {
 	user := ""
 	if isRoot {
 		user = "user=postgres"
 	}
-	return fmt.Sprintf("host=%s dbname=%s %s", sockDir, dbname, user)
+	return user
+}
+
+func makeDSN(sockDir, dbname string, isRoot bool) string {
+	return fmt.Sprintf("host=%s dbname=%s %s", sockDir, dbname, pgUser(isRoot))
 }
 
 func retry(fn func() error, attempts int, interval time.Duration) error {

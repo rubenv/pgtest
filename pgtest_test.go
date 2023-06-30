@@ -36,6 +36,9 @@ func TestPostgreSQLWithConfig(t *testing.T) {
 	_, err = pg.DB.Exec("CREATE TABLE test (val text)")
 	assert.NoError(err)
 
+	assert.NotEmpty(pg.Host)
+	assert.NotEmpty(pg.Name)
+
 	err = pg.Stop()
 	assert.NoError(err)
 }
