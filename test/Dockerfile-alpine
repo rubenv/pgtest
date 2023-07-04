@@ -1,11 +1,11 @@
-FROM golang:alpine
+FROM alpine
 
 RUN apk update && \
-    apk add postgresql && \
-    rm -rf /var/cache/apk/*
+    apk add go postgresql && \
+    rm -rf /var/cache/apk/* && \
+    mkdir /opt/src
 
-WORKDIR $GOPATH/src/github.com/rubenv/sql-migrate
-COPY . .
+WORKDIR /opt/src
+ADD . /opt/src
 
-RUN ls -alh
 RUN go test -v ./...

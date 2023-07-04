@@ -1,4 +1,4 @@
-FROM fedora:38
+FROM fedora
 
 RUN dnf install -y golang postgresql-server && \
     dnf clean all && \
