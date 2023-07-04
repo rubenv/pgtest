@@ -9,7 +9,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - distribution: fedora
+          #- distribution: fedora
           - distribution: alpine
           - distribution: ubuntu
 
