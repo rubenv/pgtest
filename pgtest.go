@@ -246,10 +246,8 @@ func (p *PG) Stop() error {
 		return err
 	}
 
-	err = p.cmd.Wait()
-	if err != nil {
-		return err
-	}
+	// Doesn't matter if the server exists with an error
+	_ = p.cmd.Wait()
 
 	if p.stderr != nil {
 		p.stderr.Close()
