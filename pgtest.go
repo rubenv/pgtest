@@ -247,7 +247,18 @@ func (p *PG) Stop() error {
 	}
 
 	// Doesn't matter if the server exists with an error
-	_ = p.cmd.Wait()
+	err = p.cmd.Wait()
+	if err != nil {
+		_ = p.cmd.Process.Signal(os.Kill)
+
+		// Remove UNIX sockets
+		files, err := os.ReadDir(p.Host)
+		if err == nil {
+			for _, file := range files {
+				_ = os.Remove(filepath.Join(p.Host, file.Name()))
+			}
+		}
+	}
 
 	if p.stderr != nil {
 		p.stderr.Close()
