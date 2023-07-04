@@ -2,23 +2,24 @@ name: Test
 on: [push]
 jobs:
   test:
-    name: Build
+    name: Test
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - distribution: fedora
+          - distribution: alpine
+          - distribution: ubuntu
+
     steps:
-      - name: Set up Go
-        uses: actions/setup-go@v1
+      - name: Checkout
+        uses: actions/checkout@v3.5.3
+
+      - name: Test using Docker
+        uses: docker/build-push-action@v4.1.1
         with:
-          go-version: 1.16
-        id: go
-
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v1
-
-      - name: Install PostgreSQL
-        run: sudo apt install postgresql
-
-      - name: Get dependencies
-        run: go get -v -t -d ./...
-
-      - name: Test
-        run: go test -v .
+          context: .
+          file: test/Dockerfile-${{ matrix.distribution }}
+          push: false

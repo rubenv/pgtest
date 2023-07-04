@@ -1,0 +1,11 @@
+FROM golang:alpine
+
+RUN apk update && \
+    apk add postgresql && \
+    rm -rf /var/cache/apk/*
+
+WORKDIR $GOPATH/src/github.com/rubenv/sql-migrate
+COPY . .
+
+RUN ls -alh
+RUN go test -v ./...

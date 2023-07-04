@@ -1,0 +1,10 @@
+FROM fedora:38
+
+RUN dnf install -y golang && \
+    dnf clean all && \
+    mkdir /opt/src
+
+WORKDIR /opt/src
+ADD . /opt/src
+
+RUN go test -v ./...
