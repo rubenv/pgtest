@@ -1,6 +1,6 @@
 FROM fedora:38
 
-RUN dnf install -y golang && \
+RUN dnf install -y golang postgresql-server && \
     dnf clean all && \
     mkdir /opt/src
 
