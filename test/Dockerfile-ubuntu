@@ -4,7 +4,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=Etc/UTC
 
 RUN apt-get update && \
-    apt-get install -y postgresql golang && \ 
+    apt-get install -y postgresql golang ca-certificates && \
     mkdir /opt/src
 
 WORKDIR /opt/src
