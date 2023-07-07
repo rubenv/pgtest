@@ -323,13 +323,18 @@ func findBinPath(binDir string) (string, error) {
 func pgUser(isRoot bool) string {
 	user := ""
 	if isRoot {
-		user = "user=postgres"
+		user = "postgres"
 	}
 	return user
 }
 
 func makeDSN(sockDir, dbname string, isRoot bool) string {
-	return fmt.Sprintf("host=%s dbname=%s %s", sockDir, dbname, pgUser(isRoot))
+	dsnUser := ""
+	user := pgUser(isRoot)
+	if user != "" {
+		dsnUser = fmt.Sprintf("user=%s", user)
+	}
+	return fmt.Sprintf("host=%s dbname=%s %s", sockDir, dbname, dsnUser)
 }
 
 func retry(fn func() error, attempts int, interval time.Duration) error {
