@@ -1,7 +1,6 @@
 package pgtest_test
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -48,7 +47,7 @@ func TestPersistent(t *testing.T) {
 
 	assert := assert.New(t)
 
-	dir, err := ioutil.TempDir("", "pgtest")
+	dir, err := os.MkdirTemp("", "pgtest")
 	assert.NoError(err)
 	defer os.RemoveAll(dir)
 
