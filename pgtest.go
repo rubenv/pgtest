@@ -354,22 +354,30 @@ func retry(fn func() error, attempts int, interval time.Duration) error {
 }
 
 func prepareCommand(isRoot bool, command string, args ...string) *exec.Cmd {
+	var cmd *exec.Cmd
 	if !isRoot {
-		return exec.Command(command, args...)
-	}
-
-	for i, a := range args {
-		if a == "" {
-			args[i] = "''"
+		cmd = exec.Command(command, args...)
+	} else {
+		for i, a := range args {
+			if a == "" {
+				args[i] = "''"
+			}
 		}
+
+		cmd = exec.Command("su",
+			"-",
+			"postgres",
+			"-c",
+			strings.Join(append([]string{command}, args...), " "),
+		)
 	}
 
-	return exec.Command("su",
-		"-",
-		"postgres",
-		"-c",
-		strings.Join(append([]string{command}, args...), " "),
+	cmd.Env = append(
+		os.Environ(),
+		"LC_ALL=en_US.UTF-8", // Fix for https://github.com/Homebrew/homebrew-core/issues/124215 in Mac OS X
 	)
+
+	return cmd
 }
 
 func abort(msg string, cmd *exec.Cmd, stderr, stdout io.ReadCloser, err error) error {
