@@ -1,9 +1,10 @@
 package pgtest
 
 type PGConfig struct {
-	BinDir       string // Directory to look for postgresql binaries including initdb, postgres
-	Dir          string // Directory for storing database files, removed for non-persistent configs
-	IsPersistent bool   // Whether to make the current configuraton persistent or not
+	BinDir         string   // Directory to look for postgresql binaries including initdb, postgres
+	Dir            string   // Directory for storing database files, removed for non-persistent configs
+	IsPersistent   bool     // Whether to make the current configuraton persistent or not
+	AdditionalArgs []string // Additional arguments to pass to the postgres command
 }
 
 func New() *PGConfig {
@@ -31,6 +32,11 @@ func (c *PGConfig) UseBinariesIn(dir string) *PGConfig {
 
 func (c *PGConfig) DataDir(dir string) *PGConfig {
 	c.Dir = dir
+	return c
+}
+
+func (c *PGConfig) WithAdditionalArgs(args ...string) *PGConfig {
+	c.AdditionalArgs = args
 	return c
 }
 
