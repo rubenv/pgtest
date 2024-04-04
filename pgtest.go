@@ -153,11 +153,17 @@ func start(config *PGConfig) (*PG, error) {
 	}
 
 	// Start PostgreSQL
-	cmd := prepareCommand(isRoot, filepath.Join(binPath, "postgres"),
+	args := []string{
 		"-D", dataDir, // Data directory
 		"-k", sockDir, // Location for the UNIX socket
 		"-h", "", // Disable TCP listening
 		"-F", // No fsync, just go fast
+	}
+	if len(config.AdditionalArgs) > 0 {
+		args = append(args, config.AdditionalArgs...)
+	}
+	cmd := prepareCommand(isRoot, filepath.Join(binPath, "postgres"),
+		args...,
 	)
 	stderr, err := cmd.StderrPipe()
 	if err != nil {

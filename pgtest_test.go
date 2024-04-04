@@ -77,3 +77,22 @@ func TestPersistent(t *testing.T) {
 	err = pg.Stop()
 	assert.NoError(err)
 }
+
+func TestAdditionalArgs(t *testing.T) {
+	t.Parallel()
+
+	assert := assert.New(t)
+
+	pg, err := pgtest.New().WithAdditionalArgs("-c", "wal_level=logical").Start()
+	assert.NoError(err)
+	assert.NotNil(pg)
+
+	//Check if the wal_level is set to logical
+	var walLevel string
+	err = pg.DB.QueryRow("SHOW wal_level").Scan(&walLevel)
+	assert.NoError(err)
+	assert.Equal(walLevel, "logical")
+
+	err = pg.Stop()
+	assert.NoError(err)
+}
