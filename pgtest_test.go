@@ -37,6 +37,7 @@ func TestPostgreSQLWithConfig(t *testing.T) {
 
 	assert.NotEmpty(pg.Host)
 	assert.NotEmpty(pg.Name)
+	assert.NotEmpty(pg.DSN)
 
 	err = pg.Stop()
 	assert.NoError(err)

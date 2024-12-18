@@ -29,6 +29,8 @@ type PG struct {
 	User string
 	Name string
 
+	DSN string
+
 	persistent bool
 
 	stderr io.ReadCloser
@@ -224,6 +226,7 @@ func start(config *PGConfig) (*PG, error) {
 		Host: sockDir,
 		User: pgUser(isRoot),
 		Name: "test",
+		DSN:  dsn,
 
 		persistent: config.IsPersistent,
 
