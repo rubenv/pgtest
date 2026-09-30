@@ -7,7 +7,6 @@ package pgtest
 import (
 	"database/sql"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"os/user"
@@ -30,9 +29,6 @@ type PG struct {
 	Name string
 
 	persistent bool
-
-	stderr io.ReadCloser
-	stdout io.ReadCloser
 }
 
 // Start a new PostgreSQL database, on temporary storage.
@@ -165,27 +161,21 @@ func start(config *PGConfig) (*PG, error) {
 	cmd := prepareCommand(isRoot, filepath.Join(binPath, "postgres"),
 		args...,
 	)
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		return nil, err
-	}
-
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		stderr.Close()
-		return nil, err
-	}
-
-	err = cmd.Start()
-	if err != nil {
-		return nil, abort("Failed to start PostgreSQL", cmd, stderr, stdout, err)
+	// os/exec drains these streams while the server runs. Leaving StderrPipe
+	// and StdoutPipe unread can block PostgreSQL when their buffers fill, and
+	// then Stop cannot finish waiting for the process to exit.
+	output := &limitedBuffer{}
+	cmd.Stderr = output
+	cmd.Stdout = output
+	if err := cmd.Start(); err != nil {
+		return nil, fmt.Errorf("Failed to start PostgreSQL: %w", err)
 	}
 
 	// Connect to DB
 	dsn := makeDSN(sockDir, "postgres", isRoot)
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
-		return nil, abort("Failed to connect to DB", cmd, stderr, stdout, err)
+		return nil, abort("Failed to connect to DB", cmd, output, err)
 	}
 
 	// Prepare test database
@@ -200,19 +190,19 @@ func start(config *PGConfig) (*PG, error) {
 		return err
 	}, 1000, 10*time.Millisecond)
 	if err != nil {
-		return nil, abort("Failed to prepare test DB", cmd, stderr, stdout, err)
+		return nil, abort("Failed to prepare test DB", cmd, output, err)
 	}
 
 	err = db.Close()
 	if err != nil {
-		return nil, abort("Failed to disconnect", cmd, stderr, stdout, err)
+		return nil, abort("Failed to disconnect", cmd, output, err)
 	}
 
 	// Connect to it properly
 	dsn = makeDSN(sockDir, "test", isRoot)
 	db, err = sql.Open("postgres", dsn)
 	if err != nil {
-		return nil, abort("Failed to connect to test DB", cmd, stderr, stdout, err)
+		return nil, abort("Failed to connect to test DB", cmd, output, err)
 	}
 
 	pg := &PG{
@@ -226,9 +216,6 @@ func start(config *PGConfig) (*PG, error) {
 		Name: "test",
 
 		persistent: config.IsPersistent,
-
-		stderr: stderr,
-		stdout: stdout,
 	}
 
 	return pg, nil
@@ -264,14 +251,6 @@ func (p *PG) Stop() error {
 				_ = os.Remove(filepath.Join(p.Host, file.Name()))
 			}
 		}
-	}
-
-	if p.stderr != nil {
-		p.stderr.Close()
-	}
-
-	if p.stdout != nil {
-		p.stdout.Close()
 	}
 
 	return nil
@@ -386,13 +365,8 @@ func prepareCommand(isRoot bool, command string, args ...string) *exec.Cmd {
 	return cmd
 }
 
-func abort(msg string, cmd *exec.Cmd, stderr, stdout io.ReadCloser, err error) error {
+func abort(msg string, cmd *exec.Cmd, output *limitedBuffer, err error) error {
 	_ = cmd.Process.Signal(os.Interrupt)
 	_ = cmd.Wait()
-
-	serr, _ := io.ReadAll(stderr)
-	sout, _ := io.ReadAll(stdout)
-	_ = stderr.Close()
-	_ = stdout.Close()
-	return fmt.Errorf("%s: %s\nOUT: %s\nERR: %s", msg, err, string(sout), string(serr))
+	return fmt.Errorf("%s: %s\nOUT/ERR (last %d bytes): %s", msg, err, maxOutput, output.String())
 }
